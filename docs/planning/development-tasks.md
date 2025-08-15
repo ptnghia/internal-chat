@@ -104,7 +104,7 @@
 ---
 
 ## 🗄️ 3. Database Schema
-**Status**: `[/]` IN_PROGRESS (2/5 completed)
+**Status**: `[/]` IN_PROGRESS (3/5 completed)
 **Description**: Thiết kế database schema cho chat app với các bảng chính
 
 ### Subtasks:
@@ -126,12 +126,14 @@
   - **Completed**: 2025-01-15
   - **Results**: 4 new tables, 7 departments, 11 teams, organizational hierarchy
 
-- `[ ]` **3.3 Chat & Message Schema**
+- `[x]` **3.3 Chat & Message Schema** ✅ **COMPLETED**
   - Thiết kế bảng Chats (id, name, type, participants)
   - Thiết kế bảng Messages (id, chat_id, sender_id, content, timestamp)
   - Thiết kế bảng MessageTypes và MessageReactions
   - Setup message threading và replies
-  - **Estimated Time**: 1 giờ 15 phút
+  - **Estimated Time**: 1 giờ 15 phút ✅ **DONE**
+  - **Completed**: 2025-01-15
+  - **Results**: 6 new tables, 13 chats, 5 message types, real-time messaging foundation
 
 - `[ ]` **3.4 Task Management Schema**
   - Thiết kế bảng Tasks (id, title, description, status, priority)
@@ -242,12 +244,12 @@
 
 ## 📊 Progress Summary
 
-### Overall Progress: 2/25 tasks completed (8%)
+### Overall Progress: 3/25 tasks completed (12%)
 
 ### By Main Category:
 - **🔧 Backend API**: 0/5 tasks (0%)
 - **🎨 Frontend**: 0/5 tasks (0%)
-- **🗄️ Database Schema**: 2/5 tasks (40%) ✅ 3.1 User & Role Schema ✅ 3.2 Department & Team Schema
+- **🗄️ Database Schema**: 3/5 tasks (60%) ✅ 3.1 User & Role ✅ 3.2 Department & Team ✅ 3.3 Chat & Message
 - **🔐 Authentication**: 0/5 tasks (0%)
 - **⚡ Real-time Chat**: 0/5 tasks (0%)
 
@@ -283,6 +285,6 @@ chore: update dependencies
 
 ---
 
-**Last Updated**: 2025-01-15 20:15
-**Current Task**: 3.3 Chat & Message Schema
+**Last Updated**: 2025-01-15 20:45
+**Current Task**: 3.4 Task Management Schema
 **Next Recommended**: Continue with Database Schema foundation
