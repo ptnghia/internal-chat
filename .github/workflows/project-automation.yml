@@ -1,0 +1,196 @@
+name: Project Board Automation
+
+on:
+  issues:
+    types: [opened, closed, assigned, unassigned, labeled, unlabeled]
+  pull_request:
+    types: [opened, closed, ready_for_review, converted_to_draft]
+  schedule:
+    # Run daily at 9 AM UTC to sync progress
+    - cron: '0 9 * * *'
+  workflow_dispatch:
+    inputs:
+      action:
+        description: 'Action to perform'
+        required: true
+        default: 'sync-progress'
+        type: choice
+        options:
+        - sync-progress
+        - update-documentation
+        - create-weekly-report
+
+jobs:
+  auto-assign-to-project:
+    if: github.event_name == 'issues' && github.event.action == 'opened'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Add issue to project
+        uses: actions/add-to-project@v0.4.0
+        with:
+          project-url: https://github.com/users/ptnghia/projects/1
+          github-token: ${{ secrets.ADD_TO_PROJECT_PAT }}
+
+  auto-move-cards:
+    if: github.event_name == 'issues' || github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Move to In Progress when assigned
+        if: github.event_name == 'issues' && github.event.action == 'assigned'
+        uses: alex-page/github-project-automation-plus@v0.8.1
+        with:
+          project: Internal Chat App Development
+          column: 🟡 In Progress
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Move to In Review when PR ready
+        if: github.event_name == 'pull_request' && github.event.action == 'ready_for_review'
+        uses: alex-page/github-project-automation-plus@v0.8.1
+        with:
+          project: Internal Chat App Development
+          column: 👀 In Review
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Move to Done when closed
+        if: (github.event_name == 'issues' && github.event.action == 'closed') || (github.event_name == 'pull_request' && github.event.action == 'closed' && github.event.pull_request.merged == true)
+        uses: alex-page/github-project-automation-plus@v0.8.1
+        with:
+          project: Internal Chat App Development
+          column: ✅ Done
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+
+  sync-progress:
+    if: github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'sync-progress')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Get project statistics
+        id: stats
+        run: |
+          # Get issue counts using GitHub CLI
+          total_issues=$(gh issue list --repo ${{ github.repository }} --state all --limit 1000 --json number | jq length)
+          open_issues=$(gh issue list --repo ${{ github.repository }} --state open --limit 1000 --json number | jq length)
+          closed_issues=$(gh issue list --repo ${{ github.repository }} --state closed --limit 1000 --json number | jq length)
+          
+          # Calculate progress
+          if [ $total_issues -gt 0 ]; then
+            progress=$((closed_issues * 100 / total_issues))
+          else
+            progress=0
+          fi
+          
+          # Get issues by phase
+          phase1_total=$(gh issue list --repo ${{ github.repository }} --label "phase: 1-planning" --state all --limit 1000 --json number | jq length)
+          phase1_done=$(gh issue list --repo ${{ github.repository }} --label "phase: 1-planning" --state closed --limit 1000 --json number | jq length)
+          
+          phase2_total=$(gh issue list --repo ${{ github.repository }} --label "phase: 2-mvp" --state all --limit 1000 --json number | jq length)
+          phase2_done=$(gh issue list --repo ${{ github.repository }} --label "phase: 2-mvp" --state closed --limit 1000 --json number | jq length)
+          
+          # Calculate phase progress
+          if [ $phase1_total -gt 0 ]; then
+            phase1_progress=$((phase1_done * 100 / phase1_total))
+          else
+            phase1_progress=0
+          fi
+          
+          if [ $phase2_total -gt 0 ]; then
+            phase2_progress=$((phase2_done * 100 / phase2_total))
+          else
+            phase2_progress=0
+          fi
+          
+          echo "total_issues=$total_issues" >> $GITHUB_OUTPUT
+          echo "open_issues=$open_issues" >> $GITHUB_OUTPUT
+          echo "closed_issues=$closed_issues" >> $GITHUB_OUTPUT
+          echo "progress=$progress" >> $GITHUB_OUTPUT
+          echo "phase1_progress=$phase1_progress" >> $GITHUB_OUTPUT
+          echo "phase2_progress=$phase2_progress" >> $GITHUB_OUTPUT
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Update progress tracking
+        run: |
+          # Update progress in documentation
+          sed -i "s/\*\*Progress\*\*: [0-9]*\/[0-9]*%/**Progress**: ${{ steps.stats.outputs.progress }}%/" docs/planning/progress-tracking.md
+          
+          # Update phase progress
+          sed -i "s/\*\*Progress\*\*: [0-9]*\/[0-9]*% (Phase 1)/**Progress**: ${{ steps.stats.outputs.phase1_progress }}% (Phase 1)/" docs/planning/progress-tracking.md
+          sed -i "s/\*\*Progress\*\*: [0-9]*\/[0-9]*% (Phase 2)/**Progress**: ${{ steps.stats.outputs.phase2_progress }}% (Phase 2)/" docs/planning/progress-tracking.md
+          
+          # Update last updated timestamp
+          current_date=$(date '+%Y-%m-%d %H:%M:%S UTC')
+          sed -i "s/\*\*Last Updated\*\*: .*/\*\*Last Updated\*\*: $current_date/" docs/planning/progress-tracking.md
+
+      - name: Commit progress updates
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add docs/planning/progress-tracking.md
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "chore: update project progress tracking [skip ci]"
+            git push
+          fi
+
+  create-weekly-report:
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'create-weekly-report'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Generate weekly report
+        run: |
+          # Create weekly report
+          report_date=$(date '+%Y-%m-%d')
+          report_file="docs/reports/weekly-report-$report_date.md"
+          
+          mkdir -p docs/reports
+          
+          cat > $report_file << EOF
+          # Weekly Report - $report_date
+          
+          ## 📊 Progress Summary
+          - Total Issues: $(gh issue list --repo ${{ github.repository }} --state all --limit 1000 --json number | jq length)
+          - Completed This Week: $(gh issue list --repo ${{ github.repository }} --state closed --search "closed:>$(date -d '7 days ago' '+%Y-%m-%d')" --json number | jq length)
+          - Currently In Progress: $(gh issue list --repo ${{ github.repository }} --label "status: in-progress" --state open --json number | jq length)
+          
+          ## 🎯 Completed Issues
+          $(gh issue list --repo ${{ github.repository }} --state closed --search "closed:>$(date -d '7 days ago' '+%Y-%m-%d')" --json title,number | jq -r '.[] | "- #\(.number): \(.title)"')
+          
+          ## 🚧 In Progress
+          $(gh issue list --repo ${{ github.repository }} --label "status: in-progress" --state open --json title,number,assignees | jq -r '.[] | "- #\(.number): \(.title) (Assignee: \(.assignees[0].login // "Unassigned"))"')
+          
+          ## 🚫 Blocked Issues
+          $(gh issue list --repo ${{ github.repository }} --label "status: blocked" --state open --json title,number | jq -r '.[] | "- #\(.number): \(.title)"')
+          
+          ## 📅 Next Week Goals
+          - Continue Phase 1 planning tasks
+          - Begin Phase 2 development preparation
+          - Address any blocked issues
+          
+          ---
+          Generated automatically on $report_date
+          EOF
+          
+          echo "Weekly report created: $report_file"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Commit weekly report
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add docs/reports/
+          git commit -m "docs: add weekly report for $(date '+%Y-%m-%d')"
+          git push
