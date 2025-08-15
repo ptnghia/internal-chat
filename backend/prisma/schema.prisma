@@ -31,9 +31,17 @@ model User {
 
   // Role relationships
   userRoles UserRole[]
-  
+
   // Profile information
   profile UserProfile?
+
+  // Department and Team relationships
+  userDepartments UserDepartment[]
+  userTeams       UserTeam[]
+
+  // Leadership relationships
+  departmentsAsHead Department[] @relation("DepartmentHead")
+  teamsAsLead       Team[]       @relation("TeamLead")
 
   // Audit fields
   createdBy String?
@@ -141,6 +149,133 @@ model UserProfile {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("user_profiles")
+}
+
+// ================================
+// DEPARTMENT & TEAM SCHEMA
+// ================================
+
+model Department {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  displayName String
+  description String?
+  code        String?  @unique // Department code (e.g., "IT", "HR", "SALES")
+  color       String?  // For UI display
+
+  // Hierarchy support
+  parentId    String?
+  parent      Department? @relation("DepartmentHierarchy", fields: [parentId], references: [id])
+  children    Department[] @relation("DepartmentHierarchy")
+
+  // Contact information
+  email       String?
+  phone       String?
+  address     String?
+
+  // Settings
+  isActive    Boolean  @default(true)
+  isPublic    Boolean  @default(true) // Visible to all users
+
+  // Metadata
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  createdBy   String?
+  updatedBy   String?
+
+  // Relationships
+  teams           Team[]
+  userDepartments UserDepartment[]
+
+  // Department head (manager)
+  headUserId      String?
+  head            User? @relation("DepartmentHead", fields: [headUserId], references: [id])
+
+  @@map("departments")
+}
+
+model Team {
+  id          String   @id @default(cuid())
+  name        String
+  displayName String
+  description String?
+  code        String?  // Team code (e.g., "DEV-FRONTEND", "SALES-NORTH")
+  color       String?  // For UI display
+
+  // Department relationship
+  departmentId String
+  department   Department @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+
+  // Team settings
+  isActive     Boolean  @default(true)
+  isPublic     Boolean  @default(true) // Visible to department members
+  maxMembers   Int?     // Maximum team size
+
+  // Team type
+  teamType     String   @default("permanent") // permanent, temporary, project
+
+  // Project teams specific fields
+  startDate    DateTime?
+  endDate      DateTime?
+
+  // Metadata
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  createdBy    String?
+  updatedBy    String?
+
+  // Relationships
+  userTeams    UserTeam[]
+
+  // Team lead
+  leadUserId   String?
+  lead         User? @relation("TeamLead", fields: [leadUserId], references: [id])
+
+  @@unique([departmentId, name])
+  @@map("teams")
+}
+
+model UserDepartment {
+  id           String   @id @default(cuid())
+  userId       String
+  departmentId String
+
+  // Role in department
+  role         String   @default("member") // member, manager, admin
+  isActive     Boolean  @default(true)
+  isPrimary    Boolean  @default(false) // Primary department for user
+
+  // Assignment details
+  assignedAt   DateTime @default(now())
+  assignedBy   String?
+
+  // Relationships
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  department   Department @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, departmentId])
+  @@map("user_departments")
+}
+
+model UserTeam {
+  id         String   @id @default(cuid())
+  userId     String
+  teamId     String
+
+  // Role in team
+  role       String   @default("member") // member, lead, admin
+  isActive   Boolean  @default(true)
+
+  // Assignment details
+  assignedAt DateTime @default(now())
+  assignedBy String?
+
+  // Relationships
+  user       User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  team       Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, teamId])
+  @@map("user_teams")
 }
 
 // ================================

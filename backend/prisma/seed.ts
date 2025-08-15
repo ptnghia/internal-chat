@@ -256,6 +256,266 @@ async function main() {
   console.log('📧 Email: admin@internal-chat.com');
   console.log('🔑 Password: admin123');
 
+  // ================================
+  // DEPARTMENTS SEEDING
+  // ================================
+  console.log('🏢 Creating departments...');
+
+  const departments = [
+    {
+      name: 'executive',
+      displayName: 'Executive',
+      description: 'Executive leadership and strategic planning',
+      code: 'EXEC',
+      color: '#8B0000',
+      email: 'executive@internal-chat.com',
+      isPublic: true,
+    },
+    {
+      name: 'human_resources',
+      displayName: 'Human Resources',
+      description: 'Employee relations, recruitment, and HR policies',
+      code: 'HR',
+      color: '#FF6B6B',
+      email: 'hr@internal-chat.com',
+      isPublic: true,
+    },
+    {
+      name: 'information_technology',
+      displayName: 'Information Technology',
+      description: 'Software development, infrastructure, and IT support',
+      code: 'IT',
+      color: '#4ECDC4',
+      email: 'it@internal-chat.com',
+      isPublic: true,
+    },
+    {
+      name: 'sales_marketing',
+      displayName: 'Sales & Marketing',
+      description: 'Sales operations, marketing campaigns, and customer relations',
+      code: 'SALES',
+      color: '#45B7D1',
+      email: 'sales@internal-chat.com',
+      isPublic: true,
+    },
+    {
+      name: 'finance_accounting',
+      displayName: 'Finance & Accounting',
+      description: 'Financial planning, accounting, and budget management',
+      code: 'FIN',
+      color: '#96CEB4',
+      email: 'finance@internal-chat.com',
+      isPublic: true,
+    },
+    {
+      name: 'operations',
+      displayName: 'Operations',
+      description: 'Daily operations, logistics, and process management',
+      code: 'OPS',
+      color: '#FFEAA7',
+      email: 'operations@internal-chat.com',
+      isPublic: true,
+    },
+    {
+      name: 'customer_support',
+      displayName: 'Customer Support',
+      description: 'Customer service, technical support, and client relations',
+      code: 'CS',
+      color: '#DDA0DD',
+      email: 'support@internal-chat.com',
+      isPublic: true,
+    },
+  ];
+
+  const createdDepartments = [];
+  for (const deptData of departments) {
+    const department = await prisma.department.upsert({
+      where: { name: deptData.name },
+      update: {},
+      create: {
+        ...deptData,
+        createdBy: adminUser.id,
+      },
+    });
+    createdDepartments.push(department);
+  }
+
+  console.log(`✅ Created ${departments.length} departments`);
+
+  // ================================
+  // TEAMS SEEDING
+  // ================================
+  console.log('👥 Creating teams...');
+
+  const teams = [
+    // IT Department Teams
+    {
+      name: 'Backend Development',
+      displayName: 'Backend Development Team',
+      description: 'Server-side development, APIs, and database management',
+      code: 'BE-DEV',
+      color: '#2C3E50',
+      departmentName: 'information_technology',
+      teamType: 'permanent',
+    },
+    {
+      name: 'Frontend Development',
+      displayName: 'Frontend Development Team',
+      description: 'User interface development and user experience',
+      code: 'FE-DEV',
+      color: '#3498DB',
+      departmentName: 'information_technology',
+      teamType: 'permanent',
+    },
+    {
+      name: 'DevOps & Infrastructure',
+      displayName: 'DevOps & Infrastructure Team',
+      description: 'System administration, deployment, and infrastructure',
+      code: 'DEVOPS',
+      color: '#E74C3C',
+      departmentName: 'information_technology',
+      teamType: 'permanent',
+    },
+    {
+      name: 'QA & Testing',
+      displayName: 'Quality Assurance & Testing',
+      description: 'Software testing, quality assurance, and automation',
+      code: 'QA',
+      color: '#9B59B6',
+      departmentName: 'information_technology',
+      teamType: 'permanent',
+    },
+
+    // Sales & Marketing Teams
+    {
+      name: 'Inside Sales',
+      displayName: 'Inside Sales Team',
+      description: 'Internal sales operations and lead qualification',
+      code: 'IN-SALES',
+      color: '#27AE60',
+      departmentName: 'sales_marketing',
+      teamType: 'permanent',
+    },
+    {
+      name: 'Field Sales',
+      displayName: 'Field Sales Team',
+      description: 'External sales and client relationship management',
+      code: 'FIELD-SALES',
+      color: '#16A085',
+      departmentName: 'sales_marketing',
+      teamType: 'permanent',
+    },
+    {
+      name: 'Digital Marketing',
+      displayName: 'Digital Marketing Team',
+      description: 'Online marketing, social media, and digital campaigns',
+      code: 'DIGITAL-MKT',
+      color: '#F39C12',
+      departmentName: 'sales_marketing',
+      teamType: 'permanent',
+    },
+
+    // Customer Support Teams
+    {
+      name: 'Technical Support',
+      displayName: 'Technical Support Team',
+      description: 'Technical assistance and troubleshooting',
+      code: 'TECH-SUP',
+      color: '#8E44AD',
+      departmentName: 'customer_support',
+      teamType: 'permanent',
+    },
+    {
+      name: 'Customer Success',
+      displayName: 'Customer Success Team',
+      description: 'Customer onboarding and success management',
+      code: 'CS-SUCCESS',
+      color: '#2980B9',
+      departmentName: 'customer_support',
+      teamType: 'permanent',
+    },
+
+    // HR Teams
+    {
+      name: 'Recruitment',
+      displayName: 'Recruitment Team',
+      description: 'Talent acquisition and recruitment processes',
+      code: 'RECRUIT',
+      color: '#E67E22',
+      departmentName: 'human_resources',
+      teamType: 'permanent',
+    },
+
+    // Finance Teams
+    {
+      name: 'Accounting',
+      displayName: 'Accounting Team',
+      description: 'Financial records, bookkeeping, and reporting',
+      code: 'ACCOUNT',
+      color: '#34495E',
+      departmentName: 'finance_accounting',
+      teamType: 'permanent',
+    },
+  ];
+
+  for (const teamData of teams) {
+    const { departmentName, ...teamInfo } = teamData;
+    const department = createdDepartments.find(d => d.name === departmentName);
+
+    if (department) {
+      await prisma.team.upsert({
+        where: {
+          departmentId_name: {
+            departmentId: department.id,
+            name: teamData.name,
+          },
+        },
+        update: {},
+        create: {
+          ...teamInfo,
+          departmentId: department.id,
+          createdBy: adminUser.id,
+        },
+      });
+    }
+  }
+
+  console.log(`✅ Created ${teams.length} teams`);
+
+  // ================================
+  // ASSIGN ADMIN TO DEPARTMENTS
+  // ================================
+  console.log('🔗 Assigning admin user to departments...');
+
+  // Assign admin to IT department as manager
+  const itDepartment = createdDepartments.find(d => d.name === 'information_technology');
+  if (itDepartment) {
+    await prisma.userDepartment.upsert({
+      where: {
+        userId_departmentId: {
+          userId: adminUser.id,
+          departmentId: itDepartment.id,
+        },
+      },
+      update: {},
+      create: {
+        userId: adminUser.id,
+        departmentId: itDepartment.id,
+        role: 'manager',
+        isPrimary: true,
+        assignedBy: adminUser.id,
+      },
+    });
+
+    // Set admin as department head
+    await prisma.department.update({
+      where: { id: itDepartment.id },
+      data: { headUserId: adminUser.id },
+    });
+  }
+
+  console.log('✅ Assigned admin user to departments');
+
   console.log('🎉 Database seeding completed successfully!');
 }
 
