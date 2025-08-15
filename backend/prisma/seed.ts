@@ -516,6 +516,227 @@ async function main() {
 
   console.log('✅ Assigned admin user to departments');
 
+  // ================================
+  // MESSAGE TYPES SEEDING
+  // ================================
+  console.log('💬 Creating message types...');
+
+  const messageTypes = [
+    {
+      name: 'text',
+      displayName: 'Text Message',
+      description: 'Regular text message',
+      icon: '💬',
+      color: '#333333',
+      isSystem: false,
+      allowReactions: true,
+      allowReplies: true,
+      allowEditing: true,
+      allowDeleting: true,
+    },
+    {
+      name: 'image',
+      displayName: 'Image Message',
+      description: 'Image attachment message',
+      icon: '🖼️',
+      color: '#4CAF50',
+      isSystem: false,
+      allowReactions: true,
+      allowReplies: true,
+      allowEditing: false,
+      allowDeleting: true,
+    },
+    {
+      name: 'file',
+      displayName: 'File Message',
+      description: 'File attachment message',
+      icon: '📎',
+      color: '#2196F3',
+      isSystem: false,
+      allowReactions: true,
+      allowReplies: true,
+      allowEditing: false,
+      allowDeleting: true,
+    },
+    {
+      name: 'system',
+      displayName: 'System Message',
+      description: 'System generated message',
+      icon: '⚙️',
+      color: '#9E9E9E',
+      isSystem: true,
+      allowReactions: false,
+      allowReplies: false,
+      allowEditing: false,
+      allowDeleting: false,
+    },
+    {
+      name: 'announcement',
+      displayName: 'Announcement',
+      description: 'Important announcement message',
+      icon: '📢',
+      color: '#FF9800',
+      isSystem: false,
+      allowReactions: true,
+      allowReplies: true,
+      allowEditing: true,
+      allowDeleting: true,
+    },
+  ];
+
+  for (const messageType of messageTypes) {
+    await prisma.messageType.upsert({
+      where: { name: messageType.name },
+      update: {},
+      create: messageType,
+    });
+  }
+
+  console.log(`✅ Created ${messageTypes.length} message types`);
+
+  // ================================
+  // DEFAULT CHATS SEEDING
+  // ================================
+  console.log('💬 Creating default chats...');
+
+  const defaultChats = [
+    {
+      name: 'General',
+      description: 'General company-wide discussion',
+      type: 'announcement',
+      isPrivate: false,
+      allowGuests: false,
+      allowFileSharing: true,
+      allowReactions: true,
+      allowThreads: true,
+      departmentId: null,
+      teamId: null,
+    },
+    {
+      name: 'Random',
+      description: 'Casual conversations and off-topic discussions',
+      type: 'group',
+      isPrivate: false,
+      allowGuests: false,
+      allowFileSharing: true,
+      allowReactions: true,
+      allowThreads: true,
+      departmentId: null,
+      teamId: null,
+    },
+  ];
+
+  // Create department-specific chats
+  for (const department of createdDepartments) {
+    defaultChats.push({
+      name: `${department.displayName} General`,
+      description: `General discussion for ${department.displayName} department`,
+      type: 'department',
+      isPrivate: false,
+      allowGuests: false,
+      allowFileSharing: true,
+      allowReactions: true,
+      allowThreads: true,
+      departmentId: department.id,
+      teamId: null,
+    });
+  }
+
+  // Create team-specific chats for IT teams
+  const itDept = createdDepartments.find(d => d.name === 'information_technology');
+  if (itDept) {
+    const itTeams = await prisma.team.findMany({
+      where: { departmentId: itDept.id },
+    });
+
+    for (const team of itTeams) {
+      defaultChats.push({
+        name: `${team.displayName} Team`,
+        description: `Team discussion for ${team.displayName}`,
+        type: 'team',
+        isPrivate: false,
+        allowGuests: false,
+        allowFileSharing: true,
+        allowReactions: true,
+        allowThreads: true,
+        departmentId: itDept.id,
+        teamId: team.id,
+      });
+    }
+  }
+
+  const createdChats = [];
+  for (const chatData of defaultChats) {
+    const chat = await prisma.chat.create({
+      data: {
+        ...chatData,
+        createdBy: adminUser.id,
+      },
+    });
+    createdChats.push(chat);
+  }
+
+  console.log(`✅ Created ${createdChats.length} default chats`);
+
+  // ================================
+  // ADD ADMIN TO CHATS
+  // ================================
+  console.log('👤 Adding admin user to chats...');
+
+  for (const chat of createdChats) {
+    await prisma.chatMember.create({
+      data: {
+        chatId: chat.id,
+        userId: adminUser.id,
+        role: 'admin',
+        canInvite: true,
+        canKick: true,
+        canPin: true,
+        canModerate: true,
+        joinedAt: new Date(),
+      },
+    });
+  }
+
+  console.log('✅ Added admin user to all chats');
+
+  // ================================
+  // WELCOME MESSAGES
+  // ================================
+  console.log('💬 Creating welcome messages...');
+
+  const generalChat = createdChats.find(c => c.name === 'General');
+  if (generalChat) {
+    await prisma.message.create({
+      data: {
+        chatId: generalChat.id,
+        senderId: adminUser.id,
+        content: '🎉 Welcome to Internal Chat! This is the general channel for company-wide announcements and discussions.',
+        type: 'announcement',
+        isPinned: true,
+      },
+    });
+
+    // Pin the welcome message
+    const welcomeMessage = await prisma.message.findFirst({
+      where: { chatId: generalChat.id },
+      orderBy: { createdAt: 'asc' },
+    });
+
+    if (welcomeMessage) {
+      await prisma.pinnedMessage.create({
+        data: {
+          chatId: generalChat.id,
+          messageId: welcomeMessage.id,
+          pinnedBy: adminUser.id,
+          reason: 'Welcome message',
+        },
+      });
+    }
+  }
+
+  console.log('✅ Created welcome messages');
+
   console.log('🎉 Database seeding completed successfully!');
 }
 

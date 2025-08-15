@@ -43,6 +43,12 @@ model User {
   departmentsAsHead Department[] @relation("DepartmentHead")
   teamsAsLead       Team[]       @relation("TeamLead")
 
+  // Chat and Message relationships
+  chatMembers       ChatMember[]
+  sentMessages      Message[]    @relation("SentMessages")
+  messageReactions  MessageReaction[]
+  pinnedMessages    PinnedMessage[] @relation("PinnedMessages")
+
   // Audit fields
   createdBy String?
   updatedBy String?
@@ -186,6 +192,7 @@ model Department {
   // Relationships
   teams           Team[]
   userDepartments UserDepartment[]
+  chats           Chat[]
 
   // Department head (manager)
   headUserId      String?
@@ -226,6 +233,7 @@ model Team {
 
   // Relationships
   userTeams    UserTeam[]
+  chats        Chat[]
 
   // Team lead
   leadUserId   String?
@@ -276,6 +284,208 @@ model UserTeam {
 
   @@unique([userId, teamId])
   @@map("user_teams")
+}
+
+// ================================
+// CHAT & MESSAGE SCHEMA
+// ================================
+
+model Chat {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+
+  // Chat type and settings
+  type        String   @default("group") // direct, group, department, team, announcement
+  isPrivate   Boolean  @default(false)
+  isArchived  Boolean  @default(false)
+
+  // Chat metadata
+  avatar      String?  // Chat room avatar
+  color       String?  // Chat room color
+
+  // Organization relationships
+  departmentId String?
+  department   Department? @relation(fields: [departmentId], references: [id])
+  teamId       String?
+  team         Team?       @relation(fields: [teamId], references: [id])
+
+  // Chat settings
+  maxMembers   Int?     // Maximum number of members
+  allowGuests  Boolean  @default(false)
+
+  // Message settings
+  messageRetentionDays Int? // Auto-delete messages after X days
+  allowFileSharing     Boolean @default(true)
+  allowReactions       Boolean @default(true)
+  allowThreads         Boolean @default(true)
+
+  // Moderation settings
+  requireApproval      Boolean @default(false) // Messages need approval
+  mutedUntil          DateTime?
+
+  // Timestamps
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  lastMessageAt DateTime?
+
+  // Audit fields
+  createdBy   String?
+  updatedBy   String?
+
+  // Relationships
+  messages      Message[]
+  chatMembers   ChatMember[]
+  pinnedMessages PinnedMessage[]
+
+  @@map("chats")
+}
+
+model ChatMember {
+  id       String   @id @default(cuid())
+  chatId   String
+  userId   String
+
+  // Member role and status
+  role     String   @default("member") // member, admin, moderator
+  isActive Boolean  @default(true)
+  isMuted  Boolean  @default(false)
+  mutedUntil DateTime?
+
+  // Member permissions
+  canInvite    Boolean @default(false)
+  canKick      Boolean @default(false)
+  canPin       Boolean @default(false)
+  canModerate  Boolean @default(false)
+
+  // Join/leave tracking
+  joinedAt     DateTime @default(now())
+  leftAt       DateTime?
+  invitedBy    String?
+
+  // Read status
+  lastReadAt   DateTime?
+  lastReadMessageId String?
+
+  // Notification settings
+  notificationsEnabled Boolean @default(true)
+  mentionNotifications Boolean @default(true)
+
+  // Relationships
+  chat Chat @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lastReadMessage Message? @relation("LastReadMessage", fields: [lastReadMessageId], references: [id])
+
+  @@unique([chatId, userId])
+  @@map("chat_members")
+}
+
+model Message {
+  id       String   @id @default(cuid())
+  chatId   String
+  senderId String
+
+  // Message content
+  content  String?  // Text content
+  type     String   @default("text") // text, image, file, system, announcement
+
+  // Message metadata
+  isEdited    Boolean @default(false)
+  isDeleted   Boolean @default(false)
+  isPinned    Boolean @default(false)
+
+  // Reply/Thread support
+  replyToId   String?
+  replyTo     Message? @relation("MessageReplies", fields: [replyToId], references: [id])
+  replies     Message[] @relation("MessageReplies")
+  threadId    String?  // For threaded conversations
+
+  // System message data
+  systemData  Json?    // For system messages (user joined, left, etc.)
+
+  // Rich content
+  mentions    String[] // Array of mentioned user IDs
+  attachments Json?    // File attachments metadata
+
+  // Message status
+  deliveredAt DateTime?
+  readBy      Json?    // Track who read the message
+
+  // Moderation
+  isApproved  Boolean  @default(true)
+  approvedBy  String?
+  approvedAt  DateTime?
+  flaggedBy   String[] // Users who flagged this message
+  flagReason  String?
+
+  // Timestamps
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  editedAt    DateTime?
+  deletedAt   DateTime?
+
+  // Relationships
+  chat        Chat     @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  sender      User     @relation("SentMessages", fields: [senderId], references: [id])
+  reactions   MessageReaction[]
+  pinnedIn    PinnedMessage[]
+  readByMembers ChatMember[] @relation("LastReadMessage")
+
+  @@map("messages")
+}
+
+model MessageReaction {
+  id        String   @id @default(cuid())
+  messageId String
+  userId    String
+  emoji     String   // Emoji unicode or shortcode
+  createdAt DateTime @default(now())
+
+  // Relationships
+  message Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([messageId, userId, emoji])
+  @@map("message_reactions")
+}
+
+model PinnedMessage {
+  id        String   @id @default(cuid())
+  chatId    String
+  messageId String
+  pinnedBy  String
+  pinnedAt  DateTime @default(now())
+  reason    String?  // Why this message was pinned
+
+  // Relationships
+  chat    Chat    @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  message Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  user    User    @relation("PinnedMessages", fields: [pinnedBy], references: [id])
+
+  @@unique([chatId, messageId])
+  @@map("pinned_messages")
+}
+
+model MessageType {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  displayName String
+  description String?
+  icon        String?  // Icon for this message type
+  color       String?  // Color for this message type
+  isSystem    Boolean  @default(false)
+  isActive    Boolean  @default(true)
+
+  // Type settings
+  allowReactions Boolean @default(true)
+  allowReplies   Boolean @default(true)
+  allowEditing   Boolean @default(true)
+  allowDeleting  Boolean @default(true)
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("message_types")
 }
 
 // ================================
