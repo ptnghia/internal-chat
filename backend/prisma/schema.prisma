@@ -1,0 +1,166 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ================================
+// USER & ROLE SCHEMA
+// ================================
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  username  String   @unique
+  password  String
+  firstName String
+  lastName  String
+  avatar    String?
+  phone     String?
+  isActive  Boolean  @default(true)
+  isVerified Boolean @default(false)
+  lastLoginAt DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Role relationships
+  userRoles UserRole[]
+  
+  // Profile information
+  profile UserProfile?
+
+  // Audit fields
+  createdBy String?
+  updatedBy String?
+
+  @@map("users")
+}
+
+model Role {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  displayName String
+  description String?
+  color       String?  // For UI display
+  isSystem    Boolean  @default(false) // System roles cannot be deleted
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relationships
+  userRoles   UserRole[]
+  permissions RolePermission[]
+
+  // Audit fields
+  createdBy String?
+  updatedBy String?
+
+  @@map("roles")
+}
+
+model UserRole {
+  id       String @id @default(cuid())
+  userId   String
+  roleId   String
+  isActive Boolean @default(true)
+  assignedAt DateTime @default(now())
+  assignedBy String?
+
+  // Relationships
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, roleId])
+  @@map("user_roles")
+}
+
+model Permission {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  displayName String
+  description String?
+  resource    String   // e.g., "users", "chats", "tasks"
+  action      String   // e.g., "create", "read", "update", "delete"
+  isSystem    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relationships
+  rolePermissions RolePermission[]
+
+  @@unique([resource, action])
+  @@map("permissions")
+}
+
+model RolePermission {
+  id           String @id @default(cuid())
+  roleId       String
+  permissionId String
+  isActive     Boolean @default(true)
+  grantedAt    DateTime @default(now())
+  grantedBy    String?
+
+  // Relationships
+  role       Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@unique([roleId, permissionId])
+  @@map("role_permissions")
+}
+
+model UserProfile {
+  id          String    @id @default(cuid())
+  userId      String    @unique
+  bio         String?
+  timezone    String?   @default("UTC")
+  language    String?   @default("en")
+  theme       String?   @default("light")
+  dateFormat  String?   @default("DD/MM/YYYY")
+  timeFormat  String?   @default("24h")
+  
+  // Notification preferences
+  emailNotifications    Boolean @default(true)
+  pushNotifications     Boolean @default(true)
+  desktopNotifications  Boolean @default(true)
+  
+  // Privacy settings
+  profileVisibility     String  @default("public") // public, private, team
+  showOnlineStatus      Boolean @default(true)
+  showLastSeen          Boolean @default(true)
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relationships
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_profiles")
+}
+
+// ================================
+// SYSTEM ROLES & PERMISSIONS SEED DATA
+// ================================
+
+// Default System Roles:
+// 1. SUPER_ADMIN - Full system access
+// 2. ADMIN - Administrative access
+// 3. MANAGER - Department/team management
+// 4. EMPLOYEE - Basic user access
+// 5. GUEST - Limited read-only access
+
+// Default Permissions by Resource:
+// Users: create, read, update, delete, manage_roles
+// Departments: create, read, update, delete, manage_members
+// Teams: create, read, update, delete, manage_members
+// Chats: create, read, update, delete, manage_rooms
+// Messages: create, read, update, delete, moderate
+// Tasks: create, read, update, delete, assign, manage
+// Files: create, read, update, delete, download, share
+// Reports: create, read, export
+// Settings: read, update, manage_system
