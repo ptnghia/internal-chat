@@ -104,7 +104,7 @@
 ---
 
 ## 🗄️ 3. Database Schema
-**Status**: `[/]` IN_PROGRESS (1/5 completed)
+**Status**: `[/]` IN_PROGRESS (2/5 completed)
 **Description**: Thiết kế database schema cho chat app với các bảng chính
 
 ### Subtasks:
@@ -117,12 +117,14 @@
   - **Completed**: 2025-01-15
   - **Results**: 6 database tables, 5 system roles, 43 permissions, default admin user
 
-- `[ ]` **3.2 Department & Team Schema**
+- `[x]` **3.2 Department & Team Schema** ✅ **COMPLETED**
   - Thiết kế bảng Departments (id, name, description, hierarchy)
   - Thiết kế bảng Teams (id, name, department_id)
   - Thiết kế bảng UserDepartments và UserTeams
   - Setup organizational hierarchy
-  - **Estimated Time**: 45 phút
+  - **Estimated Time**: 45 phút ✅ **DONE**
+  - **Completed**: 2025-01-15
+  - **Results**: 4 new tables, 7 departments, 11 teams, organizational hierarchy
 
 - `[ ]` **3.3 Chat & Message Schema**
   - Thiết kế bảng Chats (id, name, type, participants)
@@ -240,12 +242,12 @@
 
 ## 📊 Progress Summary
 
-### Overall Progress: 1/25 tasks completed (4%)
+### Overall Progress: 2/25 tasks completed (8%)
 
 ### By Main Category:
 - **🔧 Backend API**: 0/5 tasks (0%)
 - **🎨 Frontend**: 0/5 tasks (0%)
-- **🗄️ Database Schema**: 1/5 tasks (20%) ✅ 3.1 User & Role Schema
+- **🗄️ Database Schema**: 2/5 tasks (40%) ✅ 3.1 User & Role Schema ✅ 3.2 Department & Team Schema
 - **🔐 Authentication**: 0/5 tasks (0%)
 - **⚡ Real-time Chat**: 0/5 tasks (0%)
 
@@ -281,6 +283,6 @@ chore: update dependencies
 
 ---
 
-**Last Updated**: 2025-01-15 19:50
-**Current Task**: 3.2 Department & Team Schema
+**Last Updated**: 2025-01-15 20:15
+**Current Task**: 3.3 Chat & Message Schema
 **Next Recommended**: Continue with Database Schema foundation

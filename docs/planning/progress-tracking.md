@@ -24,10 +24,11 @@
 - [ ] 🔐 Authentication (0/5 subtasks)
 - [ ] ⚡ Real-time Chat (0/5 subtasks)
 
-**Total Development Tasks**: 1/25 completed (4%)
+**Total Development Tasks**: 2/25 completed (8%)
 
 #### ✅ Recently Completed:
 - **3.1 User & Role Schema** (2025-01-15) - Database foundation with RBAC system
+- **3.2 Department & Team Schema** (2025-01-15) - Organizational structure with 7 departments, 11 teams
 
 ### Phase 2: MVP Development (Tháng 3-5)
 **Status**: ⚪ Not Started  
@@ -74,7 +75,7 @@
 #### Development Progress Detail
 - **🔧 Backend API**: 0/5 tasks (Setup project, Express, Prisma, Environment, API structure)
 - **🎨 Frontend**: 0/5 tasks (React project, Material-UI, Redux, Routing, Layout)
-- **🗄️ Database Schema**: 1/5 tasks (✅ User/Role schema, Department/Team, Chat/Message, Task, File/Notification)
+- **🗄️ Database Schema**: 2/5 tasks (✅ User/Role schema, ✅ Department/Team schema, Chat/Message, Task, File/Notification)
 - **🔐 Authentication**: 0/5 tasks (JWT setup, Password hashing, API endpoints, RBAC, Frontend integration)
 - **⚡ Real-time Chat**: 0/5 tasks (Socket.io setup, Auth, Room management, Broadcasting, Frontend integration)
 
