@@ -737,6 +737,218 @@ async function main() {
 
   console.log('✅ Created welcome messages');
 
+  // ================================
+  // TASK MANAGEMENT SEEDING
+  // ================================
+  console.log('📋 Creating task management data...');
+
+  // Task Priorities
+  const taskPriorities = [
+    { name: 'critical', displayName: 'Critical', description: 'Critical priority - immediate attention required', color: '#FF0000', icon: '🔥', level: 1 },
+    { name: 'high', displayName: 'High', description: 'High priority - important task', color: '#FF6600', icon: '⬆️', level: 2 },
+    { name: 'medium', displayName: 'Medium', description: 'Medium priority - normal task', color: '#FFA500', icon: '➡️', level: 3, isDefault: true },
+    { name: 'low', displayName: 'Low', description: 'Low priority - can be done later', color: '#00AA00', icon: '⬇️', level: 4 },
+    { name: 'minimal', displayName: 'Minimal', description: 'Minimal priority - nice to have', color: '#888888', icon: '⏬', level: 5 },
+  ];
+
+  for (const priority of taskPriorities) {
+    await prisma.taskPriority.upsert({
+      where: { name: priority.name },
+      update: {},
+      create: priority,
+    });
+  }
+
+  // Task Statuses
+  const taskStatuses = [
+    { name: 'todo', displayName: 'To Do', description: 'Task is ready to be worked on', color: '#6B7280', icon: '📝', order: 1, category: 'backlog', isDefault: true },
+    { name: 'in_progress', displayName: 'In Progress', description: 'Task is currently being worked on', color: '#3B82F6', icon: '🔄', order: 2, category: 'active' },
+    { name: 'review', displayName: 'In Review', description: 'Task is under review', color: '#F59E0B', icon: '👀', order: 3, category: 'active' },
+    { name: 'testing', displayName: 'Testing', description: 'Task is being tested', color: '#8B5CF6', icon: '🧪', order: 4, category: 'active' },
+    { name: 'done', displayName: 'Done', description: 'Task is completed', color: '#10B981', icon: '✅', order: 5, category: 'done', isFinal: true },
+    { name: 'cancelled', displayName: 'Cancelled', description: 'Task was cancelled', color: '#EF4444', icon: '❌', order: 6, category: 'cancelled', isFinal: true },
+  ];
+
+  for (const status of taskStatuses) {
+    await prisma.taskStatus.upsert({
+      where: { name: status.name },
+      update: {},
+      create: status,
+    });
+  }
+
+  // Task Types
+  const taskTypes = [
+    { name: 'task', displayName: 'Task', description: 'General task', color: '#3B82F6', icon: '📋', isDefault: true, allowSubtasks: true, allowTimeTracking: true },
+    { name: 'bug', displayName: 'Bug', description: 'Bug fix task', color: '#EF4444', icon: '🐛', allowSubtasks: false, allowTimeTracking: true, requireEstimate: true },
+    { name: 'feature', displayName: 'Feature', description: 'New feature development', color: '#10B981', icon: '✨', allowSubtasks: true, allowTimeTracking: true, requireEstimate: true },
+    { name: 'epic', displayName: 'Epic', description: 'Large feature or initiative', color: '#8B5CF6', icon: '🎯', allowSubtasks: true, allowTimeTracking: false },
+    { name: 'story', displayName: 'User Story', description: 'User story', color: '#F59E0B', icon: '📖', allowSubtasks: true, allowTimeTracking: true },
+  ];
+
+  for (const type of taskTypes) {
+    await prisma.taskType.upsert({
+      where: { name: type.name },
+      update: {},
+      create: type,
+    });
+  }
+
+  console.log('✅ Created task priorities, statuses, and types');
+
+  // ================================
+  // SAMPLE TASKS SEEDING
+  // ================================
+  console.log('📋 Creating sample tasks...');
+
+  // Get IT department for sample tasks (reuse existing variable)
+  const backendTeam = await prisma.team.findFirst({
+    where: { name: 'Backend Development', departmentId: itDepartment?.id },
+  });
+  const frontendTeam = await prisma.team.findFirst({
+    where: { name: 'Frontend Development', departmentId: itDepartment?.id },
+  });
+
+  if (itDepartment && backendTeam && frontendTeam) {
+    // Epic: Internal Chat App Development
+    const epic = await prisma.task.create({
+      data: {
+        title: 'Internal Chat App Development',
+        description: 'Complete development of the internal chat application for company-wide communication',
+        type: 'epic',
+        priority: 'high',
+        status: 'in_progress',
+        departmentId: itDepartment.id,
+        estimatedHours: 500,
+        startDate: new Date('2025-01-01'),
+        dueDate: new Date('2025-03-31'),
+        labels: ['internal-tools', 'communication', 'priority'],
+        tags: ['chat', 'real-time', 'web-app'],
+        createdBy: adminUser.id,
+      },
+    });
+
+    // Backend Stories
+    const backendStories = [
+      {
+        title: 'Database Schema Design',
+        description: 'Design and implement comprehensive database schema for users, chats, messages, and tasks',
+        type: 'story',
+        priority: 'high',
+        status: 'done',
+        teamId: backendTeam.id,
+        estimatedHours: 20,
+        actualHours: 18,
+        storyPoints: 8,
+        completedAt: new Date(),
+        labels: ['database', 'schema'],
+        tags: ['prisma', 'postgresql'],
+      },
+      {
+        title: 'Authentication System',
+        description: 'Implement JWT-based authentication with role-based access control',
+        type: 'story',
+        priority: 'high',
+        status: 'todo',
+        teamId: backendTeam.id,
+        estimatedHours: 30,
+        storyPoints: 13,
+        labels: ['auth', 'security'],
+        tags: ['jwt', 'rbac'],
+      },
+      {
+        title: 'Real-time Chat API',
+        description: 'Develop Socket.io based real-time messaging API with chat rooms',
+        type: 'story',
+        priority: 'high',
+        status: 'todo',
+        teamId: backendTeam.id,
+        estimatedHours: 40,
+        storyPoints: 21,
+        labels: ['real-time', 'api'],
+        tags: ['socket.io', 'messaging'],
+      },
+    ];
+
+    // Frontend Stories
+    const frontendStories = [
+      {
+        title: 'UI Component Library',
+        description: 'Create reusable UI components using Material-UI',
+        type: 'story',
+        priority: 'medium',
+        status: 'todo',
+        teamId: frontendTeam.id,
+        estimatedHours: 25,
+        storyPoints: 8,
+        labels: ['ui', 'components'],
+        tags: ['material-ui', 'react'],
+      },
+      {
+        title: 'Chat Interface',
+        description: 'Build responsive chat interface with message history and real-time updates',
+        type: 'story',
+        priority: 'high',
+        status: 'todo',
+        teamId: frontendTeam.id,
+        estimatedHours: 35,
+        storyPoints: 13,
+        labels: ['chat', 'ui'],
+        tags: ['react', 'real-time'],
+      },
+    ];
+
+    // Create backend stories
+    for (const storyData of backendStories) {
+      await prisma.task.create({
+        data: {
+          ...storyData,
+          departmentId: itDepartment.id,
+          epicId: epic.id,
+          createdBy: adminUser.id,
+        },
+      });
+    }
+
+    // Create frontend stories
+    for (const storyData of frontendStories) {
+      await prisma.task.create({
+        data: {
+          ...storyData,
+          departmentId: itDepartment.id,
+          epicId: epic.id,
+          createdBy: adminUser.id,
+        },
+      });
+    }
+
+    // Assign admin to epic
+    await prisma.taskAssignment.create({
+      data: {
+        taskId: epic.id,
+        userId: adminUser.id,
+        role: 'assignee',
+        acceptedAt: new Date(),
+      },
+    });
+
+    // Add admin as watcher to all tasks
+    const allTasks = await prisma.task.findMany({
+      where: { epicId: epic.id },
+    });
+
+    for (const task of allTasks) {
+      await prisma.taskWatcher.create({
+        data: {
+          taskId: task.id,
+          userId: adminUser.id,
+        },
+      });
+    }
+
+    console.log(`✅ Created epic with ${backendStories.length + frontendStories.length} stories`);
+  }
+
   console.log('🎉 Database seeding completed successfully!');
 }
 

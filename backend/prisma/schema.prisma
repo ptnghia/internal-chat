@@ -49,6 +49,13 @@ model User {
   messageReactions  MessageReaction[]
   pinnedMessages    PinnedMessage[] @relation("PinnedMessages")
 
+  // Task Management relationships
+  taskAssignments   TaskAssignment[]
+  taskComments      TaskComment[]
+  taskAttachments   TaskAttachment[]
+  taskTimeEntries   TaskTimeEntry[]
+  taskWatchers      TaskWatcher[]
+
   // Audit fields
   createdBy String?
   updatedBy String?
@@ -193,6 +200,7 @@ model Department {
   teams           Team[]
   userDepartments UserDepartment[]
   chats           Chat[]
+  tasks           Task[]
 
   // Department head (manager)
   headUserId      String?
@@ -234,6 +242,7 @@ model Team {
   // Relationships
   userTeams    UserTeam[]
   chats        Chat[]
+  tasks        Task[]
 
   // Team lead
   leadUserId   String?
@@ -486,6 +495,307 @@ model MessageType {
   updatedAt   DateTime @updatedAt
 
   @@map("message_types")
+}
+
+// ================================
+// TASK MANAGEMENT SCHEMA
+// ================================
+
+model Task {
+  id          String   @id @default(cuid())
+  title       String
+  description String?
+
+  // Task categorization
+  type        String   @default("task") // task, bug, feature, epic, story
+  priority    String   @default("medium") // low, medium, high, urgent, critical
+  status      String   @default("todo") // todo, in_progress, review, testing, done, cancelled
+
+  // Task organization
+  departmentId String?
+  department   Department? @relation(fields: [departmentId], references: [id])
+  teamId       String?
+  team         Team?       @relation(fields: [teamId], references: [id])
+
+  // Task hierarchy
+  parentId     String?
+  parent       Task?   @relation("TaskHierarchy", fields: [parentId], references: [id])
+  children     Task[]  @relation("TaskHierarchy")
+
+  // Epic/Story relationship
+  epicId       String?
+  epic         Task?   @relation("EpicStories", fields: [epicId], references: [id])
+  stories      Task[]  @relation("EpicStories")
+
+  // Task details
+  estimatedHours Float?
+  actualHours    Float?
+  storyPoints    Int?
+
+  // Dates and deadlines
+  startDate      DateTime?
+  dueDate        DateTime?
+  completedAt    DateTime?
+
+  // Task settings
+  isArchived     Boolean @default(false)
+  isTemplate     Boolean @default(false)
+  isRecurring    Boolean @default(false)
+  recurringPattern String? // daily, weekly, monthly, yearly
+
+  // Labels and tags
+  labels         String[] // Array of label names
+  tags           String[] // Array of tag names
+
+  // External references
+  externalId     String? // External system ID
+  externalUrl    String? // Link to external system
+
+  // Timestamps
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  // Audit fields
+  createdBy      String?
+  updatedBy      String?
+
+  // Relationships
+  assignments    TaskAssignment[]
+  comments       TaskComment[]
+  attachments    TaskAttachment[]
+  timeEntries    TaskTimeEntry[]
+  dependencies   TaskDependency[] @relation("TaskDependencies")
+  dependents     TaskDependency[] @relation("DependentTasks")
+  watchers       TaskWatcher[]
+
+  @@map("tasks")
+}
+
+model TaskAssignment {
+  id       String   @id @default(cuid())
+  taskId   String
+  userId   String
+
+  // Assignment details
+  role     String   @default("assignee") // assignee, reviewer, approver, watcher
+  isActive Boolean  @default(true)
+
+  // Assignment tracking
+  assignedAt DateTime @default(now())
+  assignedBy String?
+  acceptedAt DateTime?
+
+  // Work tracking
+  hoursWorked Float?  @default(0)
+  progress    Int?    @default(0) // Percentage 0-100
+
+  // Relationships
+  task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([taskId, userId, role])
+  @@map("task_assignments")
+}
+
+model TaskComment {
+  id       String   @id @default(cuid())
+  taskId   String
+  userId   String
+
+  // Comment content
+  content  String
+  type     String   @default("comment") // comment, note, status_change, assignment_change
+
+  // Comment metadata
+  isInternal Boolean @default(false) // Internal team comment
+  isEdited   Boolean @default(false)
+  isDeleted  Boolean @default(false)
+
+  // Reply support
+  replyToId  String?
+  replyTo    TaskComment? @relation("CommentReplies", fields: [replyToId], references: [id])
+  replies    TaskComment[] @relation("CommentReplies")
+
+  // Timestamps
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  editedAt   DateTime?
+  deletedAt  DateTime?
+
+  // Relationships
+  task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id])
+
+  @@map("task_comments")
+}
+
+model TaskAttachment {
+  id       String   @id @default(cuid())
+  taskId   String
+  userId   String   // Who uploaded
+
+  // File details
+  fileName String
+  fileSize Int
+  fileType String
+  filePath String
+
+  // File metadata
+  originalName String
+  mimeType     String
+  isImage      Boolean @default(false)
+  thumbnailPath String?
+
+  // Upload tracking
+  uploadedAt   DateTime @default(now())
+
+  // Relationships
+  task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id])
+
+  @@map("task_attachments")
+}
+
+model TaskTimeEntry {
+  id          String   @id @default(cuid())
+  taskId      String
+  userId      String
+
+  // Time tracking
+  hours       Float
+  description String?
+  date        DateTime @default(now())
+
+  // Time entry details
+  billable    Boolean  @default(false)
+  hourlyRate  Float?
+
+  // Timestamps
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relationships
+  task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id])
+
+  @@map("task_time_entries")
+}
+
+model TaskDependency {
+  id            String @id @default(cuid())
+  taskId        String // The task that depends on another
+  dependsOnId   String // The task that this task depends on
+
+  // Dependency details
+  type          String @default("finish_to_start") // finish_to_start, start_to_start, finish_to_finish, start_to_finish
+  lag           Int?   @default(0) // Lag time in hours
+  isActive      Boolean @default(true)
+
+  // Timestamps
+  createdAt     DateTime @default(now())
+  createdBy     String?
+
+  // Relationships
+  task          Task @relation("TaskDependencies", fields: [taskId], references: [id], onDelete: Cascade)
+  dependsOnTask Task @relation("DependentTasks", fields: [dependsOnId], references: [id], onDelete: Cascade)
+
+  @@unique([taskId, dependsOnId])
+  @@map("task_dependencies")
+}
+
+model TaskWatcher {
+  id       String   @id @default(cuid())
+  taskId   String
+  userId   String
+
+  // Watcher settings
+  isActive Boolean  @default(true)
+  watchedAt DateTime @default(now())
+
+  // Notification preferences
+  notifyOnUpdate    Boolean @default(true)
+  notifyOnComment   Boolean @default(true)
+  notifyOnAssignment Boolean @default(true)
+  notifyOnStatusChange Boolean @default(true)
+
+  // Relationships
+  task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id])
+
+  @@unique([taskId, userId])
+  @@map("task_watchers")
+}
+
+model TaskStatus {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  displayName String
+  description String?
+  color       String?
+  icon        String?
+
+  // Status properties
+  isDefault   Boolean  @default(false)
+  isActive    Boolean  @default(true)
+  isFinal     Boolean  @default(false) // Cannot change from this status
+
+  // Workflow
+  order       Int      @default(0)
+  category    String   @default("active") // backlog, active, done, cancelled
+
+  // Permissions
+  allowedRoles String[] // Roles that can set this status
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("task_statuses")
+}
+
+model TaskType {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  displayName String
+  description String?
+  color       String?
+  icon        String?
+
+  // Type properties
+  isDefault   Boolean  @default(false)
+  isActive    Boolean  @default(true)
+
+  // Default settings for this type
+  defaultPriority String? @default("medium")
+  defaultStatus   String? @default("todo")
+
+  // Workflow settings
+  allowSubtasks   Boolean @default(true)
+  allowTimeTracking Boolean @default(true)
+  requireEstimate Boolean @default(false)
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("task_types")
+}
+
+model TaskPriority {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  displayName String
+  description String?
+  color       String?
+  icon        String?
+
+  // Priority properties
+  level       Int      @unique // 1 = highest, 5 = lowest
+  isDefault   Boolean  @default(false)
+  isActive    Boolean  @default(true)
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("task_priorities")
 }
 
 // ================================
