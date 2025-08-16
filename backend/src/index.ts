@@ -5,6 +5,7 @@ import morgan from 'morgan';
 import dotenv from 'dotenv';
 import rateLimit from 'express-rate-limit';
 import cookieParser from 'cookie-parser';
+import { createServer } from 'http';
 
 import { errorHandler } from '@/middleware/errorHandler';
 import { notFoundHandler } from '@/middleware/notFoundHandler';
@@ -12,6 +13,7 @@ import { requestLogger } from '@/middleware/requestLogger';
 import { validateEnv } from '@/utils/validateEnv';
 import { logger } from '@/utils/logger';
 import { prisma } from '@/utils/database';
+import { initializeSocketServer } from '@/socket/socketServer';
 
 // Load environment variables
 dotenv.config();
@@ -21,6 +23,9 @@ validateEnv();
 
 const app = express();
 const PORT = process.env.PORT || 3001;
+
+// Create HTTP server
+const httpServer = createServer(app);
 
 // ================================
 // SECURITY MIDDLEWARE
@@ -41,7 +46,7 @@ app.use(helmet({
 
 // CORS configuration
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+  origin: process.env.FRONTEND_URL || 'http://localhost:5173',
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
@@ -207,13 +212,17 @@ process.on('unhandledRejection', (reason, promise) => {
   gracefulShutdown('unhandledRejection');
 });
 
+// Initialize Socket.io server
+const io = initializeSocketServer(httpServer);
+
 // Start server
-const server = app.listen(PORT, () => {
+const server = httpServer.listen(PORT, () => {
   logger.info(`🚀 Internal Chat API Server running on port ${PORT}`);
   logger.info(`📊 Health check available at http://localhost:${PORT}/health`);
   logger.info(`🔗 API available at http://localhost:${PORT}/api`);
+  logger.info(`⚡ Socket.io server initialized for real-time messaging`);
   logger.info(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
 });
 
 export default app;
-export { server };
+export { server, httpServer, io };
