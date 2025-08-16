@@ -56,6 +56,20 @@ model User {
   taskTimeEntries   TaskTimeEntry[]
   taskWatchers      TaskWatcher[]
 
+  // File Management relationships
+  uploadedFiles     File[]           @relation("UploadedFiles")
+  sharedFiles       FileShare[]      @relation("SharedFiles")
+  fileVersions      FileVersion[]    @relation("FileVersions")
+  fileTags          FileTag[]        @relation("FileTags")
+
+  // Notification relationships
+  receivedNotifications Notification[] @relation("ReceivedNotifications")
+  sentNotifications     Notification[] @relation("SentNotifications")
+  notificationPreferences NotificationPreference?
+
+  // System relationships
+  auditLogs         AuditLog[]
+
   // Audit fields
   createdBy String?
   updatedBy String?
@@ -201,6 +215,7 @@ model Department {
   userDepartments UserDepartment[]
   chats           Chat[]
   tasks           Task[]
+  fileFolders     FileFolder[]
 
   // Department head (manager)
   headUserId      String?
@@ -243,6 +258,7 @@ model Team {
   userTeams    UserTeam[]
   chats        Chat[]
   tasks        Task[]
+  fileFolders  FileFolder[]
 
   // Team lead
   leadUserId   String?
@@ -796,6 +812,362 @@ model TaskPriority {
   updatedAt   DateTime @updatedAt
 
   @@map("task_priorities")
+}
+
+// ================================
+// FILE MANAGEMENT SCHEMA
+// ================================
+
+model File {
+  id          String   @id @default(cuid())
+  fileName    String
+  originalName String
+  filePath    String
+  fileSize    Int
+  mimeType    String
+
+  // File categorization
+  fileType    String   // image, document, video, audio, archive, other
+  category    String   @default("general") // avatar, attachment, document, media, temp
+
+  // File metadata
+  isImage     Boolean  @default(false)
+  imageWidth  Int?
+  imageHeight Int?
+  thumbnailPath String?
+  previewPath String?
+
+  // File organization
+  folderId    String?
+  folder      FileFolder? @relation(fields: [folderId], references: [id])
+
+  // Access control
+  isPublic    Boolean  @default(false)
+  isTemporary Boolean  @default(false)
+  expiresAt   DateTime?
+
+  // File status
+  isActive    Boolean  @default(true)
+  isDeleted   Boolean  @default(false)
+  deletedAt   DateTime?
+
+  // Upload tracking
+  uploadedBy  String
+  uploader    User     @relation("UploadedFiles", fields: [uploadedBy], references: [id])
+  uploadedAt  DateTime @default(now())
+
+  // File sharing
+  downloadCount Int    @default(0)
+  lastDownloadAt DateTime?
+
+  // External storage
+  storageProvider String @default("local") // local, s3, cloudinary, etc.
+  externalId      String?
+  externalUrl     String?
+
+  // Timestamps
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relationships
+  shares      FileShare[]
+  versions    FileVersion[]
+  tags        FileTag[]
+
+  @@map("files")
+}
+
+model FileFolder {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+
+  // Folder hierarchy
+  parentId    String?
+  parent      FileFolder? @relation("FolderHierarchy", fields: [parentId], references: [id])
+  children    FileFolder[] @relation("FolderHierarchy")
+
+  // Folder organization
+  departmentId String?
+  department   Department? @relation(fields: [departmentId], references: [id])
+  teamId       String?
+  team         Team?       @relation(fields: [teamId], references: [id])
+
+  // Access control
+  isPublic    Boolean  @default(false)
+  isSystem    Boolean  @default(false)
+
+  // Folder settings
+  maxFileSize Int?     // Max file size in bytes
+  allowedTypes String[] // Allowed file types
+
+  // Timestamps
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  createdBy   String?
+
+  // Relationships
+  files       File[]
+
+  @@map("file_folders")
+}
+
+model FileShare {
+  id          String   @id @default(cuid())
+  fileId      String
+  sharedWith  String   // User ID or 'public' for public sharing
+
+  // Share settings
+  canView     Boolean  @default(true)
+  canDownload Boolean  @default(true)
+  canEdit     Boolean  @default(false)
+  canShare    Boolean  @default(false)
+
+  // Share expiration
+  expiresAt   DateTime?
+  isActive    Boolean  @default(true)
+
+  // Share tracking
+  sharedBy    String
+  sharedAt    DateTime @default(now())
+  accessCount Int      @default(0)
+  lastAccessAt DateTime?
+
+  // Relationships
+  file        File     @relation(fields: [fileId], references: [id], onDelete: Cascade)
+  sharer      User     @relation("SharedFiles", fields: [sharedBy], references: [id])
+
+  @@unique([fileId, sharedWith])
+  @@map("file_shares")
+}
+
+model FileVersion {
+  id          String   @id @default(cuid())
+  fileId      String
+  versionNumber Int
+  fileName    String
+  filePath    String
+  fileSize    Int
+
+  // Version metadata
+  changeLog   String?
+  isActive    Boolean  @default(false) // Only one version can be active
+
+  // Version tracking
+  createdBy   String
+  createdAt   DateTime @default(now())
+
+  // Relationships
+  file        File     @relation(fields: [fileId], references: [id], onDelete: Cascade)
+  creator     User     @relation("FileVersions", fields: [createdBy], references: [id])
+
+  @@unique([fileId, versionNumber])
+  @@map("file_versions")
+}
+
+model FileTag {
+  id       String @id @default(cuid())
+  fileId   String
+  tagName  String
+  tagColor String?
+
+  // Tag metadata
+  createdBy String
+  createdAt DateTime @default(now())
+
+  // Relationships
+  file     File @relation(fields: [fileId], references: [id], onDelete: Cascade)
+  creator  User @relation("FileTags", fields: [createdBy], references: [id])
+
+  @@unique([fileId, tagName])
+  @@map("file_tags")
+}
+
+// ================================
+// NOTIFICATION SCHEMA
+// ================================
+
+model Notification {
+  id          String   @id @default(cuid())
+  recipientId String
+
+  // Notification content
+  title       String
+  message     String
+  type        String   // info, success, warning, error, mention, assignment, etc.
+  category    String   @default("general") // chat, task, file, system, user
+
+  // Notification data
+  data        Json?    // Additional structured data
+  actionUrl   String?  // URL to navigate when clicked
+  actionText  String?  // Text for action button
+
+  // Notification source
+  sourceType  String?  // chat, task, file, user, system
+  sourceId    String?  // ID of the source entity
+
+  // Sender information
+  senderId    String?
+  senderName  String?  // For system notifications
+
+  // Notification status
+  isRead      Boolean  @default(false)
+  isArchived  Boolean  @default(false)
+  isPinned    Boolean  @default(false)
+
+  // Delivery settings
+  deliveryMethod String[] @default(["in_app"]) // in_app, email, push, sms
+  isDelivered    Boolean  @default(false)
+  deliveredAt    DateTime?
+
+  // Read tracking
+  readAt      DateTime?
+
+  // Expiration
+  expiresAt   DateTime?
+
+  // Timestamps
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relationships
+  recipient   User     @relation("ReceivedNotifications", fields: [recipientId], references: [id], onDelete: Cascade)
+  sender      User?    @relation("SentNotifications", fields: [senderId], references: [id])
+
+  @@map("notifications")
+}
+
+model NotificationPreference {
+  id       String @id @default(cuid())
+  userId   String
+
+  // Notification categories
+  chatMessages      Boolean @default(true)
+  chatMentions      Boolean @default(true)
+  taskAssignments   Boolean @default(true)
+  taskUpdates       Boolean @default(true)
+  taskComments      Boolean @default(true)
+  taskDeadlines     Boolean @default(true)
+  fileShares        Boolean @default(true)
+  systemUpdates     Boolean @default(true)
+  userActivities    Boolean @default(false)
+
+  // Delivery methods
+  emailEnabled      Boolean @default(true)
+  pushEnabled       Boolean @default(true)
+  smsEnabled        Boolean @default(false)
+
+  // Timing preferences
+  quietHoursStart   String? // HH:MM format
+  quietHoursEnd     String? // HH:MM format
+  weekendNotifications Boolean @default(false)
+
+  // Frequency settings
+  instantNotifications Boolean @default(true)
+  dailyDigest         Boolean @default(false)
+  weeklyDigest        Boolean @default(false)
+
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relationships
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId])
+  @@map("notification_preferences")
+}
+
+model NotificationTemplate {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  displayName String
+  description String?
+
+  // Template content
+  titleTemplate   String
+  messageTemplate String
+  category        String
+  type            String
+
+  // Template settings
+  isActive        Boolean @default(true)
+  isSystem        Boolean @default(false)
+
+  // Default settings
+  defaultDeliveryMethods String[] @default(["in_app"])
+  defaultActionUrl       String?
+  defaultActionText      String?
+
+  // Template variables (JSON schema)
+  variables       Json?
+
+  // Timestamps
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  createdBy       String?
+
+  @@map("notification_templates")
+}
+
+// ================================
+// SYSTEM SETTINGS SCHEMA
+// ================================
+
+model SystemSetting {
+  id          String   @id @default(cuid())
+  key         String   @unique
+  value       String
+  type        String   @default("string") // string, number, boolean, json
+  category    String   @default("general")
+
+  // Setting metadata
+  displayName String?
+  description String?
+  isPublic    Boolean  @default(false) // Can be read by non-admin users
+  isEditable  Boolean  @default(true)
+
+  // Validation
+  validationRules Json? // JSON schema for validation
+
+  // Timestamps
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  updatedBy   String?
+
+  @@map("system_settings")
+}
+
+model AuditLog {
+  id          String   @id @default(cuid())
+  userId      String?
+
+  // Action details
+  action      String   // create, update, delete, login, logout, etc.
+  resource    String   // user, task, chat, file, etc.
+  resourceId  String?
+
+  // Change tracking
+  oldValues   Json?
+  newValues   Json?
+  changes     Json?    // Specific fields that changed
+
+  // Request metadata
+  ipAddress   String?
+  userAgent   String?
+  method      String?  // GET, POST, PUT, DELETE
+  endpoint    String?
+
+  // Additional context
+  metadata    Json?
+
+  // Timestamps
+  createdAt   DateTime @default(now())
+
+  // Relationships
+  user        User?    @relation(fields: [userId], references: [id])
+
+  @@map("audit_logs")
 }
 
 // ================================

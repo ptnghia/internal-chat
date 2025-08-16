@@ -949,6 +949,337 @@ async function main() {
     console.log(`✅ Created epic with ${backendStories.length + frontendStories.length} stories`);
   }
 
+  // ================================
+  // FILE MANAGEMENT SEEDING
+  // ================================
+  console.log('📁 Creating file management data...');
+
+  // Create default file folders
+  const defaultFolders = [
+    {
+      name: 'Documents',
+      description: 'General documents and files',
+      isPublic: false,
+      isSystem: true,
+      allowedTypes: ['pdf', 'doc', 'docx', 'txt', 'md'],
+      maxFileSize: 50 * 1024 * 1024, // 50MB
+    },
+    {
+      name: 'Images',
+      description: 'Image files and graphics',
+      isPublic: false,
+      isSystem: true,
+      allowedTypes: ['jpg', 'jpeg', 'png', 'gif', 'svg', 'webp'],
+      maxFileSize: 10 * 1024 * 1024, // 10MB
+    },
+    {
+      name: 'Avatars',
+      description: 'User profile pictures',
+      isPublic: true,
+      isSystem: true,
+      allowedTypes: ['jpg', 'jpeg', 'png'],
+      maxFileSize: 2 * 1024 * 1024, // 2MB
+    },
+    {
+      name: 'Attachments',
+      description: 'Chat and task attachments',
+      isPublic: false,
+      isSystem: true,
+      allowedTypes: ['*'], // All types allowed
+      maxFileSize: 100 * 1024 * 1024, // 100MB
+    },
+    {
+      name: 'Templates',
+      description: 'Document templates and forms',
+      isPublic: true,
+      isSystem: true,
+      allowedTypes: ['pdf', 'doc', 'docx', 'xls', 'xlsx'],
+      maxFileSize: 25 * 1024 * 1024, // 25MB
+    },
+  ];
+
+  for (const folderData of defaultFolders) {
+    await prisma.fileFolder.create({
+      data: {
+        ...folderData,
+        createdBy: adminUser.id,
+      },
+    });
+  }
+
+  // Create department-specific folders
+  for (const department of createdDepartments) {
+    await prisma.fileFolder.create({
+      data: {
+        name: `${department.displayName} Files`,
+        description: `Files specific to ${department.displayName} department`,
+        departmentId: department.id,
+        isPublic: false,
+        isSystem: false,
+        createdBy: adminUser.id,
+      },
+    });
+  }
+
+  console.log(`✅ Created ${defaultFolders.length + createdDepartments.length} file folders`);
+
+  // ================================
+  // NOTIFICATION SEEDING
+  // ================================
+  console.log('🔔 Creating notification system data...');
+
+  // Create notification templates
+  const notificationTemplates = [
+    {
+      name: 'task_assigned',
+      displayName: 'Task Assigned',
+      description: 'Notification when a task is assigned to a user',
+      titleTemplate: 'New Task Assigned: {{taskTitle}}',
+      messageTemplate: 'You have been assigned to task "{{taskTitle}}" by {{assignerName}}',
+      category: 'task',
+      type: 'info',
+      defaultDeliveryMethods: ['in_app', 'email'],
+      defaultActionUrl: '/tasks/{{taskId}}',
+      defaultActionText: 'View Task',
+      variables: {
+        taskId: 'string',
+        taskTitle: 'string',
+        assignerName: 'string',
+        assignerId: 'string',
+      },
+      isSystem: true,
+    },
+    {
+      name: 'chat_mention',
+      displayName: 'Chat Mention',
+      description: 'Notification when user is mentioned in chat',
+      titleTemplate: 'You were mentioned in {{chatName}}',
+      messageTemplate: '{{senderName}} mentioned you in {{chatName}}: {{messagePreview}}',
+      category: 'chat',
+      type: 'mention',
+      defaultDeliveryMethods: ['in_app', 'push'],
+      defaultActionUrl: '/chats/{{chatId}}?message={{messageId}}',
+      defaultActionText: 'View Message',
+      variables: {
+        chatId: 'string',
+        chatName: 'string',
+        messageId: 'string',
+        messagePreview: 'string',
+        senderName: 'string',
+        senderId: 'string',
+      },
+      isSystem: true,
+    },
+    {
+      name: 'file_shared',
+      displayName: 'File Shared',
+      description: 'Notification when a file is shared with user',
+      titleTemplate: 'File Shared: {{fileName}}',
+      messageTemplate: '{{sharerName}} shared a file "{{fileName}}" with you',
+      category: 'file',
+      type: 'info',
+      defaultDeliveryMethods: ['in_app'],
+      defaultActionUrl: '/files/{{fileId}}',
+      defaultActionText: 'View File',
+      variables: {
+        fileId: 'string',
+        fileName: 'string',
+        sharerName: 'string',
+        sharerId: 'string',
+      },
+      isSystem: true,
+    },
+    {
+      name: 'task_deadline',
+      displayName: 'Task Deadline',
+      description: 'Notification for upcoming task deadlines',
+      titleTemplate: 'Task Deadline Approaching: {{taskTitle}}',
+      messageTemplate: 'Task "{{taskTitle}}" is due {{dueDate}}',
+      category: 'task',
+      type: 'warning',
+      defaultDeliveryMethods: ['in_app', 'email'],
+      defaultActionUrl: '/tasks/{{taskId}}',
+      defaultActionText: 'View Task',
+      variables: {
+        taskId: 'string',
+        taskTitle: 'string',
+        dueDate: 'string',
+      },
+      isSystem: true,
+    },
+    {
+      name: 'system_announcement',
+      displayName: 'System Announcement',
+      description: 'System-wide announcements',
+      titleTemplate: 'System Announcement: {{title}}',
+      messageTemplate: '{{message}}',
+      category: 'system',
+      type: 'info',
+      defaultDeliveryMethods: ['in_app', 'email'],
+      defaultActionUrl: '{{actionUrl}}',
+      defaultActionText: '{{actionText}}',
+      variables: {
+        title: 'string',
+        message: 'string',
+        actionUrl: 'string',
+        actionText: 'string',
+      },
+      isSystem: true,
+    },
+  ];
+
+  for (const template of notificationTemplates) {
+    await prisma.notificationTemplate.create({
+      data: {
+        ...template,
+        createdBy: adminUser.id,
+      },
+    });
+  }
+
+  // Create notification preferences for admin user
+  await prisma.notificationPreference.create({
+    data: {
+      userId: adminUser.id,
+      chatMessages: true,
+      chatMentions: true,
+      taskAssignments: true,
+      taskUpdates: true,
+      taskComments: true,
+      taskDeadlines: true,
+      fileShares: true,
+      systemUpdates: true,
+      userActivities: false,
+      emailEnabled: true,
+      pushEnabled: true,
+      smsEnabled: false,
+      instantNotifications: true,
+      dailyDigest: false,
+      weeklyDigest: true,
+    },
+  });
+
+  // Create welcome notification for admin
+  await prisma.notification.create({
+    data: {
+      recipientId: adminUser.id,
+      title: 'Welcome to Internal Chat!',
+      message: 'Your account has been set up successfully. You can now start using the internal chat application.',
+      type: 'success',
+      category: 'system',
+      deliveryMethod: ['in_app'],
+      isDelivered: true,
+      deliveredAt: new Date(),
+      data: {
+        isWelcome: true,
+        version: '1.0.0',
+      },
+      actionUrl: '/dashboard',
+      actionText: 'Go to Dashboard',
+    },
+  });
+
+  console.log(`✅ Created ${notificationTemplates.length} notification templates and preferences`);
+
+  // ================================
+  // SYSTEM SETTINGS SEEDING
+  // ================================
+  console.log('⚙️ Creating system settings...');
+
+  const systemSettings = [
+    {
+      key: 'app_name',
+      value: 'Internal Chat',
+      type: 'string',
+      category: 'general',
+      displayName: 'Application Name',
+      description: 'The name of the application',
+      isPublic: true,
+      isEditable: true,
+    },
+    {
+      key: 'app_version',
+      value: '1.0.0',
+      type: 'string',
+      category: 'general',
+      displayName: 'Application Version',
+      description: 'Current version of the application',
+      isPublic: true,
+      isEditable: false,
+    },
+    {
+      key: 'max_file_size',
+      value: '104857600', // 100MB in bytes
+      type: 'number',
+      category: 'files',
+      displayName: 'Maximum File Size',
+      description: 'Maximum file size allowed for uploads (in bytes)',
+      isPublic: false,
+      isEditable: true,
+    },
+    {
+      key: 'allowed_file_types',
+      value: JSON.stringify(['jpg', 'jpeg', 'png', 'gif', 'pdf', 'doc', 'docx', 'txt', 'zip']),
+      type: 'json',
+      category: 'files',
+      displayName: 'Allowed File Types',
+      description: 'List of allowed file extensions',
+      isPublic: false,
+      isEditable: true,
+    },
+    {
+      key: 'chat_message_retention_days',
+      value: '365',
+      type: 'number',
+      category: 'chat',
+      displayName: 'Chat Message Retention',
+      description: 'Number of days to keep chat messages (0 = forever)',
+      isPublic: false,
+      isEditable: true,
+    },
+    {
+      key: 'notification_batch_size',
+      value: '100',
+      type: 'number',
+      category: 'notifications',
+      displayName: 'Notification Batch Size',
+      description: 'Number of notifications to process in each batch',
+      isPublic: false,
+      isEditable: true,
+    },
+    {
+      key: 'enable_file_versioning',
+      value: 'true',
+      type: 'boolean',
+      category: 'files',
+      displayName: 'Enable File Versioning',
+      description: 'Allow multiple versions of the same file',
+      isPublic: false,
+      isEditable: true,
+    },
+    {
+      key: 'enable_audit_logging',
+      value: 'true',
+      type: 'boolean',
+      category: 'security',
+      displayName: 'Enable Audit Logging',
+      description: 'Log all user actions for security auditing',
+      isPublic: false,
+      isEditable: true,
+    },
+  ];
+
+  for (const setting of systemSettings) {
+    await prisma.systemSetting.create({
+      data: {
+        ...setting,
+        updatedBy: adminUser.id,
+      },
+    });
+  }
+
+  console.log(`✅ Created ${systemSettings.length} system settings`);
+
   console.log('🎉 Database seeding completed successfully!');
 }
 
