@@ -134,20 +134,20 @@ update_progress_file() {
 # Function to start a new task
 start_task() {
     local task_id="$1"
-    
+
     if [ -z "$task_id" ]; then
         print_error "Usage: start_task <task_id>"
         echo "Example: start_task 3.1"
         return 1
     fi
-    
+
     print_status "Starting task: $task_id"
-    
-    # Create a new branch for the task
-    local branch_name="task-$(echo $task_id | tr '.' '-')"
-    git checkout -b "$branch_name"
-    
-    print_success "Created and switched to branch: $branch_name"
+
+    # Ensure we're on main branch and up to date
+    git checkout main
+    git pull origin main
+
+    print_success "Ready to work on task $task_id on main branch"
     print_warning "Remember to:"
     echo "   1. Update task status to IN_PROGRESS"
     echo "   2. Implement the task"
@@ -160,28 +160,20 @@ start_task() {
 complete_task() {
     local task_id="$1"
     local description="$2"
-    
+
     if [ -z "$task_id" ] || [ -z "$description" ]; then
         print_error "Usage: complete_task <task_id> <description>"
         echo "Example: complete_task 3.1 'implement user and role schema'"
         return 1
     fi
-    
+
     local commit_message="feat: $description"
-    
-    # Commit and push changes
+
+    # Commit and push changes directly to main
     commit_and_push "Task $task_id" "$commit_message"
-    
-    # Merge back to main
-    git checkout main
-    git merge "task-$(echo $task_id | tr '.' '-')"
-    git push origin main
-    
-    # Delete feature branch
-    git branch -d "task-$(echo $task_id | tr '.' '-')"
-    
+
     print_success "Task $task_id completed successfully!"
-    
+
     # Show next recommended task
     show_next_task
 }
