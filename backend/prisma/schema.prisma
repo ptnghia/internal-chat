@@ -24,8 +24,27 @@ model User {
   avatar    String?
   phone     String?
   isActive  Boolean  @default(true)
-  isVerified Boolean @default(false)
-  lastLoginAt DateTime?
+  isEmailVerified Boolean @default(false)
+
+  // Authentication fields
+  passwordChangedAt          DateTime?
+  passwordResetToken         String?
+  passwordResetExpires       DateTime?
+  emailVerificationToken     String?
+  emailVerificationExpires   DateTime?
+  twoFactorSecret            String?
+  twoFactorEnabled           Boolean  @default(false)
+  twoFactorBackupCodes       String[]
+  tempToken                  String?
+  tempTokenExpires           DateTime?
+
+  // Login tracking
+  lastLoginAt     DateTime?
+  lastLoginIp     String?
+  loginAttempts   Int       @default(0)
+  lockedUntil     DateTime?
+
+  // Timestamps
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -69,12 +88,30 @@ model User {
 
   // System relationships
   auditLogs         AuditLog[]
+  refreshTokens     RefreshToken[]
 
   // Audit fields
   createdBy String?
   updatedBy String?
 
   @@map("users")
+}
+
+model RefreshToken {
+  id        String   @id @default(cuid())
+  userId    String
+  tokenId   String   // UUID for token identification
+  token     String   // Hashed refresh token
+  isActive  Boolean  @default(true)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relationships
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, tokenId])
+  @@map("refresh_tokens")
 }
 
 model Role {

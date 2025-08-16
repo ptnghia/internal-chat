@@ -4,6 +4,7 @@ import helmet from 'helmet';
 import morgan from 'morgan';
 import dotenv from 'dotenv';
 import rateLimit from 'express-rate-limit';
+import cookieParser from 'cookie-parser';
 
 import { errorHandler } from '@/middleware/errorHandler';
 import { notFoundHandler } from '@/middleware/notFoundHandler';
@@ -65,6 +66,7 @@ app.use('/api/', limiter);
 // Body parsing middleware
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+app.use(cookieParser());
 
 // Logging middleware
 if (process.env.NODE_ENV !== 'test') {
@@ -124,7 +126,13 @@ app.get('/api/health', async (req, res) => {
 // API ROUTES
 // ================================
 
-// API routes will be added here
+// Import routes
+import authRoutes from '@/routes/auth';
+
+// Mount routes
+app.use('/api/auth', authRoutes);
+
+// API root endpoint
 app.use('/api', (req, res, next) => {
   res.status(200).json({
     message: 'Internal Chat API',
@@ -132,6 +140,7 @@ app.use('/api', (req, res, next) => {
     timestamp: new Date().toISOString(),
     endpoints: {
       health: '/api/health',
+      auth: '/api/auth',
       docs: '/api/docs',
     },
   });
