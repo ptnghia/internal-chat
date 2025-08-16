@@ -17,7 +17,7 @@
 ---
 
 ## 🔧 1. Setup Backend API
-**Status**: `[/]` IN_PROGRESS (1/5 completed)
+**Status**: `[/]` IN_PROGRESS (2/5 completed)
 **Description**: Tạo Node.js server với Express + Prisma cho Internal Chat App
 
 ### Subtasks:
@@ -30,12 +30,15 @@
   - **Completed**: 2025-01-16
   - **Results**: Complete backend foundation with Express, TypeScript, health checks, logging
 
-- `[ ]` **1.2 Setup Express Server**
-  - Cài đặt Express.js và types
-  - Tạo basic server setup
-  - Cấu hình middleware (cors, helmet, morgan)
-  - Setup error handling middleware
-  - **Estimated Time**: 45 phút
+- `[x]` **1.2 Authentication System** ✅ **COMPLETED**
+  - JWT token generation and validation
+  - User login with email/username support
+  - Password hashing with bcrypt
+  - Role-based access control (RBAC)
+  - Protected route middleware
+  - **Estimated Time**: 2 giờ ✅ **DONE**
+  - **Completed**: 2025-01-16
+  - **Results**: Complete authentication system with JWT, RBAC, 42 permissions, login/profile endpoints working
 
 - `[ ]` **1.3 Setup Prisma ORM**
   - Cài đặt Prisma CLI và client
