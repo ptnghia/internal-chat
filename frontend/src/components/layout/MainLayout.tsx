@@ -34,6 +34,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useAppSelector, useAppDispatch } from '../../store';
 import { toggleSidebar, setSidebarOpen, setIsMobile } from '../../store/slices/uiSlice';
 import { logoutUser } from '../../store/slices/authSlice';
+import SocketStatus from '../common/SocketStatus';
 
 interface MainLayoutProps {
   children: React.ReactNode;
@@ -145,6 +146,7 @@ const MainLayout = ({ children }: MainLayoutProps) => {
           <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
             {navigationItems.find(item => item.path === location.pathname)?.text || 'Internal Chat'}
           </Typography>
+          <SocketStatus />
           <IconButton
             size="large"
             edge="end"

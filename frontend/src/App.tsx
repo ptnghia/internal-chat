@@ -11,6 +11,7 @@ import { router } from './router';
 
 // Components
 import NotificationProvider from './components/common/NotificationProvider';
+import { SocketProvider } from './contexts/SocketContext';
 import { useAppDispatch, useAppSelector } from './store';
 import { getCurrentUser } from './store/slices/authSlice';
 
@@ -30,7 +31,9 @@ function AppContent() {
     <>
       <CssBaseline />
       <NotificationProvider />
-      <RouterProvider router={router} />
+      <SocketProvider>
+        <RouterProvider router={router} />
+      </SocketProvider>
     </>
   );
 }

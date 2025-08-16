@@ -1,4 +1,5 @@
 import { Typography, Box } from '@mui/material';
+import SimpleChatTest from '../../components/chat/SimpleChatTest';
 
 const ChatsPage = () => {
   return (
@@ -6,9 +7,7 @@ const ChatsPage = () => {
       <Typography variant="h4" component="h1" gutterBottom>
         Chats
       </Typography>
-      <Typography variant="body1">
-        Chat interface - Coming soon
-      </Typography>
+      <SimpleChatTest />
     </Box>
   );
 };
