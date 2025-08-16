@@ -104,7 +104,7 @@
 ---
 
 ## 🗄️ 3. Database Schema
-**Status**: `[/]` IN_PROGRESS (4/5 completed)
+**Status**: `[x]` COMPLETED (5/5 completed)
 **Description**: Thiết kế database schema cho chat app với các bảng chính
 
 ### Subtasks:
@@ -144,12 +144,14 @@
   - **Completed**: 2025-01-15
   - **Results**: 10 new tables, epic with 5 stories, complete project management system
 
-- `[ ]` **3.5 File & Notification Schema**
+- `[x]` **3.5 File & Notification Schema** ✅ **COMPLETED**
   - Thiết kế bảng Files (id, name, path, size, type)
   - Thiết kế bảng Notifications (id, user_id, type, content)
   - Thiết kế bảng UserSettings và SystemSettings
   - Setup audit logs và activity tracking
-  - **Estimated Time**: 1 giờ
+  - **Estimated Time**: 1 giờ ✅ **DONE**
+  - **Completed**: 2025-01-15
+  - **Results**: 10 new tables, complete file & notification system, 100% database foundation
 
 **Total Estimated Time**: 5 giờ 30 phút
 
@@ -246,12 +248,12 @@
 
 ## 📊 Progress Summary
 
-### Overall Progress: 4/25 tasks completed (16%)
+### Overall Progress: 5/25 tasks completed (20%)
 
 ### By Main Category:
 - **🔧 Backend API**: 0/5 tasks (0%)
 - **🎨 Frontend**: 0/5 tasks (0%)
-- **🗄️ Database Schema**: 4/5 tasks (80%) ✅ 3.1 User & Role ✅ 3.2 Department & Team ✅ 3.3 Chat & Message ✅ 3.4 Task Management
+- **🗄️ Database Schema**: 5/5 tasks (100%) ✅ 3.1 User & Role ✅ 3.2 Department & Team ✅ 3.3 Chat & Message ✅ 3.4 Task Management ✅ 3.5 File & Notification
 - **🔐 Authentication**: 0/5 tasks (0%)
 - **⚡ Real-time Chat**: 0/5 tasks (0%)
 
@@ -287,6 +289,6 @@ chore: update dependencies
 
 ---
 
-**Last Updated**: 2025-01-15 21:15
-**Current Task**: 3.5 File & Notification Schema
-**Next Recommended**: Complete Database Schema foundation
+**Last Updated**: 2025-01-15 21:45
+**Current Task**: 1.1 Khởi tạo Backend Project
+**Next Recommended**: Start Backend API Implementation
