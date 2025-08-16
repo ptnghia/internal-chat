@@ -40,12 +40,13 @@
   - **Completed**: 2025-01-16
   - **Results**: Complete authentication system with JWT, RBAC, 42 permissions, login/profile endpoints working
 
-- `[ ]` **1.3 Setup Prisma ORM**
-  - Cài đặt Prisma CLI và client
-  - Tạo prisma/schema.prisma cơ bản
-  - Cấu hình database connection
-  - Setup Prisma generate và migrate scripts
-  - **Estimated Time**: 1 giờ
+- `[/]` **1.3 API Routes & Controllers** 🔄 **IN_PROGRESS**
+  - Tạo User management API (CRUD operations)
+  - Tạo Department & Team management API
+  - Tạo Chat & Message API endpoints
+  - Tạo Task management API
+  - Setup input validation và error handling
+  - **Estimated Time**: 2 giờ 30 phút
 
 - `[ ]` **1.4 Environment Configuration**
   - Tạo .env template và .env.example

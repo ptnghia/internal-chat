@@ -128,9 +128,13 @@ app.get('/api/health', async (req, res) => {
 
 // Import routes
 import authRoutes from '@/routes/auth';
+import userRoutes from '@/routes/users';
+import departmentRoutes from '@/routes/departments';
 
 // Mount routes
 app.use('/api/auth', authRoutes);
+app.use('/api/users', userRoutes);
+app.use('/api/departments', departmentRoutes);
 
 // API root endpoint
 app.use('/api', (req, res, next) => {
@@ -141,6 +145,8 @@ app.use('/api', (req, res, next) => {
     endpoints: {
       health: '/api/health',
       auth: '/api/auth',
+      users: '/api/users',
+      departments: '/api/departments',
       docs: '/api/docs',
     },
   });
