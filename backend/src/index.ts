@@ -130,11 +130,17 @@ app.get('/api/health', async (req, res) => {
 import authRoutes from '@/routes/auth';
 import userRoutes from '@/routes/users';
 import departmentRoutes from '@/routes/departments';
+import teamRoutes from '@/routes/teams';
+import chatRoutes from '@/routes/chats';
+import taskRoutes from '@/routes/tasks';
 
 // Mount routes
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/departments', departmentRoutes);
+app.use('/api/teams', teamRoutes);
+app.use('/api/chats', chatRoutes);
+app.use('/api/tasks', taskRoutes);
 
 // API root endpoint
 app.use('/api', (req, res, next) => {
@@ -147,6 +153,9 @@ app.use('/api', (req, res, next) => {
       auth: '/api/auth',
       users: '/api/users',
       departments: '/api/departments',
+      teams: '/api/teams',
+      chats: '/api/chats',
+      tasks: '/api/tasks',
       docs: '/api/docs',
     },
   });

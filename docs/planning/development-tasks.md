@@ -40,13 +40,14 @@
   - **Completed**: 2025-01-16
   - **Results**: Complete authentication system with JWT, RBAC, 42 permissions, login/profile endpoints working
 
-- `[/]` **1.3 API Routes & Controllers** 🔄 **IN_PROGRESS**
-  - Tạo User management API (CRUD operations)
-  - Tạo Department & Team management API
-  - Tạo Chat & Message API endpoints
-  - Tạo Task management API
-  - Setup input validation và error handling
-  - **Estimated Time**: 2 giờ 30 phút
+- `[/]` **1.3 API Routes & Controllers** 🔄 **IN_PROGRESS** (40% complete)
+  - ✅ User management API (CRUD operations) - DONE
+  - ✅ Department management API - DONE
+  - ✅ Permission-based access control middleware - DONE
+  - ⏳ Team management API - TODO
+  - ⏳ Chat & Message API endpoints - TODO
+  - ⏳ Task management API - TODO
+  - **Estimated Time**: 2 giờ 30 phút (1 giờ completed)
 
 - `[ ]` **1.4 Environment Configuration**
   - Tạo .env template và .env.example
